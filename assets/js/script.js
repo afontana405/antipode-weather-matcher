@@ -23,4 +23,19 @@ async function getCurrentWeather(lat, lon) {
     }
 }
 
-getCurrentWeather(40, -74)
+// getCurrentWeather(40, -74)
+
+function generateEarthCoordinates(step = 20) {
+    const coordinates = [];
+    for (let lat = -90; lat <= 90; lat += step) {
+        for (let lon = -180; lon < 180; lon += step) {
+            coordinates.push({ lat, lon });
+        }
+    }
+    return coordinates;
+}
+
+// Example usage:
+const earthCoords = generateEarthCoordinates();
+console.log(earthCoords);
+console.log(`Total coordinate pairs: ${earthCoords.length}`);
