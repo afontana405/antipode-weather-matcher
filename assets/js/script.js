@@ -9,7 +9,7 @@ async function getCurrentWeather(lat, lon) {
 
     try {
         const responses = await fetchWeatherApi("https://api.open-meteo.com/v1/forecast", params);
-        
+ 
         const response = responses[0];
         const current = response.current();
         const temp = current.variables(0).value();
@@ -23,9 +23,22 @@ async function getCurrentWeather(lat, lon) {
     }
 }
 
-// getCurrentWeather(40, -74)
+// Function to loop through coordinates array and fetch weather data
+async function fetchWeatherForAllCoordinates(coordinates) {
+    const weatherDataPromises = coordinates.map(async (coord) => {
+        const { lat, lon } = coord;
+        const weather = await getCurrentWeather(lat, lon);
+        return weather;
+    });
 
-function generateEarthCoordinates(step = 20) {
+    // Wait for all weather data to be fetched
+    const weatherResults = await Promise.all(weatherDataPromises);
+
+    // Output weather data for all coordinates
+    console.log(weatherResults);
+}
+
+function generateEarthCoordinates(step = 40) {
     const coordinates = [];
     for (let lat = -90; lat <= 90; lat += step) {
         for (let lon = -180; lon < 180; lon += step) {
@@ -35,7 +48,6 @@ function generateEarthCoordinates(step = 20) {
     return coordinates;
 }
 
-// Example usage:
-const earthCoords = generateEarthCoordinates();
-console.log(earthCoords);
-console.log(`Total coordinate pairs: ${earthCoords.length}`);
+const coordinates = generateEarthCoordinates();
+
+fetchWeatherForAllCoordinates(coordinates);
