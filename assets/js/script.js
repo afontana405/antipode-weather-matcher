@@ -23,31 +23,60 @@ async function getCurrentWeather(lat, lon) {
     }
 }
 
-// Function to loop through coordinates array and fetch weather data
-async function fetchWeatherForAllCoordinates(coordinates) {
-    const weatherDataPromises = coordinates.map(async (coord) => {
-        const { lat, lon } = coord;
-        const weather = await getCurrentWeather(lat, lon);
-        return weather;
-    });
-
-    // Wait for all weather data to be fetched
-    const weatherResults = await Promise.all(weatherDataPromises);
-
-    // Output weather data for all coordinates
-    console.log(weatherResults);
+// buffer to prevent "too many concurrent requests" errors from weather api
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function generateEarthCoordinates(step = 40) {
+// Function to loop through coordinates array with delay to avoid rate limiting
+async function fetchWeatherForAllCoordinates(coordinates) {
+    const weatherResults = [];
+
+    for (let i = 0; i < coordinates.length; i++) {
+        const { lat, lon } = coordinates[i];
+
+        await getCurrentWeather(lat, lon);
+
+        // Wait 500ms between requests; adjust as needed based on Open-Meteo limits
+        await delay(500);
+    }
+}
+
+function generateAntipodePairedCoordinates(step = 40) {
     const coordinates = [];
+    const added = new Set();
+
+    // Helper to normalize longitude to [-180, 180)
+    const normalizeLon = lon => {
+        let l = ((lon + 180) % 360 + 360) % 360 - 180;
+        return l === -180 ? 180 : l; // handle edge case if needed
+    };
+
     for (let lat = -90; lat <= 90; lat += step) {
         for (let lon = -180; lon < 180; lon += step) {
+            const key = `${lat},${lon}`;
+            if (added.has(key)) continue;
+
+            // Add the current coordinate
             coordinates.push({ lat, lon });
+            added.add(key);
+
+            // Compute antipode
+            const antipodeLat = -lat;
+            const antipodeLon = normalizeLon(lon + 180);
+            const antipodeKey = `${antipodeLat},${antipodeLon}`;
+
+            // Skip adding antipode if it is already added (avoids duplicates)
+            if (!added.has(antipodeKey)) {
+                coordinates.push({ lat: antipodeLat, lon: antipodeLon });
+                added.add(antipodeKey);
+            }
         }
     }
+
     return coordinates;
 }
 
-const coordinates = generateEarthCoordinates();
-
-fetchWeatherForAllCoordinates(coordinates);
+// Example usage:
+const coords = generateAntipodePairedCoordinates();
+console.log(fetchWeatherForAllCoordinates(coords))
